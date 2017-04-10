@@ -21,6 +21,8 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
+		void filter();
+		void findBlueSquare();
 		
 		IKinectSensor* kinect;
 		IColorFrameSource* colorFrameSource;
@@ -30,6 +32,20 @@ class ofApp : public ofBaseApp{
 		int px_width;
 		int px_height;
 		unsigned int bpp;
+
+
+		ofImage boxaroo;
+
+		bool takePicture = false;
+
+		int state = 0;
+		ofVec2f topLeft;
+		ofVec2f topRight;
+		ofVec2f bottomLeft;
+		ofVec2f bottomRight;
+
+		vector<BYTE> patternBuffer;
+		unsigned int patternBufferSize;
 
 		vector<BYTE> colorBuffer;
 		unsigned int colorBufferSize;
