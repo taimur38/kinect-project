@@ -21,8 +21,15 @@ class ofApp : public ofBaseApp{
 		void windowResized(int w, int h);
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
-		void filter();
+
+		void filter(); // unused - see findBlueSquare
+
 		void findBlueSquare();
+		ofVec2f getCenterOfBlueSquare();
+		void setCorner(); 
+		void Calibrate();
+		int getModifiedX(int x);
+		ofVec2f convertPoint(ofVec2f cameraPoint);
 		
 		IKinectSensor* kinect;
 		IColorFrameSource* colorFrameSource;
@@ -37,6 +44,8 @@ class ofApp : public ofBaseApp{
 		ofImage boxaroo;
 
 		bool takePicture = false;
+
+		bool calibrated = false;
 
 		int state = 0;
 		ofVec2f topLeft;

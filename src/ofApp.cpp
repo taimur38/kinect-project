@@ -53,39 +53,97 @@ void ofApp::setup(){
 }
 
 //--------------------------------------------------------------
-void ofApp::update(){
+void ofApp::update() {
 
-	if (takePicture) {
+	if (calibrated) {
+
 		HRESULT hr;
 		IColorFrame* colorFrame;
 		hr = colorFrameReader->AcquireLatestFrame(&colorFrame);
 		if (SUCCEEDED(hr)) {
-			takePicture = false;
 			hr = colorFrame->CopyConvertedFrameDataToArray(colorBuffer.size(), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra);
 
-			if (SUCCEEDED(hr)) {
-
-				findBlueSquare();
-				texture.loadData(&patternBuffer[0], px_width, px_height, GL_BGRA);
-			}
+			//TODO: loop through colorBuffer, get new x/y pos, write values to new buffer, and load THAT one.
+			texture.loadData(&patternBuffer[0], px_width, px_height, GL_BGRA);
 		}
 		else {
-			//ofLogError("didn't get latest frame");
+			ofLogError("didn't get latest frame");
 		}
 
-		if(colorFrame)
+		if (colorFrame)
 			colorFrame->Release();
 	}
 
+}
+
+void ofApp::setCorner() {
+
+	switch (state % 4) {
+	case 0:
+		ofLog(OF_LOG_VERBOSE, "setting top left");
+		topLeft = getCenterOfBlueSquare();
+		ofLog(OF_LOG_VERBOSE, "top left: %f, %f", topLeft.x, topLeft.y);
+		break;
+	case 1:
+		ofLog(OF_LOG_VERBOSE, "setting top right");
+		topRight = getCenterOfBlueSquare();
+		ofLog(OF_LOG_VERBOSE, "top right: %f, %f", topRight.x, topRight.y);
+		break;
+	case 3:
+		ofLog(OF_LOG_VERBOSE, "setting bottom right");
+		bottomRight = getCenterOfBlueSquare();
+		ofLog(OF_LOG_VERBOSE, "top left: %f, %f", bottomRight.x, bottomRight.y);
+		break;
+	case 2:
+		ofLog(OF_LOG_VERBOSE, "setting bottom left");
+		bottomLeft = getCenterOfBlueSquare();
+		ofLog(OF_LOG_VERBOSE, "bottom left: %f, %f", bottomLeft.x, bottomLeft.y);
+		break;
+	}
 
 }
 
-//--------------------------------------------------------------
-void ofApp::draw(){
+ofVec2f ofApp::getCenterOfBlueSquare() {
+	
+	double avg_x = 0;
+	double avg_y = 0;
 
-	texture.draw(0, 0);
+	int blues = 0;
+	for (int i = 0; i < patternBuffer.size(); i += 4) {
+		if (patternBuffer[i] == 255)
+			blues++;
+	}
+
+	for (int i = 0; i < patternBuffer.size(); i += 4)
+	{
+		const unsigned int blue_val = patternBuffer[i];
+		if (blue_val == 255) {
+			int px_val = i / 4;
+			int x = px_val % px_width;
+			int y = px_val / px_width;
+
+			avg_x += (double)x / blues;
+			avg_y += (double)y / blues;
+		}
+	}
+
+	ofLog(OF_LOG_VERBOSE, "px_width: %d, px_height: %d, blues: %d", px_width, px_height, blues);
+
+	ofLog(OF_LOG_VERBOSE, "(%f, %f)", avg_x, avg_y);
+	return ofVec2f(avg_x, avg_y);
+}
+
+//--------------------------------------------------------------
+void ofApp::draw() {
+
+	//texture.draw(0, 0);
 	int s = 400;
-	boxaroo.draw(ofGetMouseX() - s/2, ofGetMouseY() - s/2, s, s);
+	int w = 1920;
+	int h = 1080;
+	w = ofGetViewportWidth();
+	h = ofGetViewportHeight();
+
+	boxaroo.draw(w * (state%2) - s/2, h * (state/2) - s/2, s, s); // place square. top left, top right, bottom left, bottom right.
 }
 
 void ofApp::filter() {
@@ -113,13 +171,63 @@ void ofApp::filter() {
 
 }
 
+ofVec2f ofApp::convertPoint(ofVec2f cameraPoint) {
+
+	// assuming topleft,topright,bottomleft,bottomright are set.
+	// in practice we want to take things we see from camera and convert it into screen.
+
+	if (cameraPoint.x < topLeft.x || cameraPoint.x > topRight.x || cameraPoint.y < topLeft.y || cameraPoint.y > bottomRight.y)
+		return ofVec2f(-100, -100);
+
+	const double cameraDiagonal = sqrt(((topLeft.x - bottomRight.x) * (topLeft.x - bottomRight.x)) + (topLeft.y - bottomRight.y) * (topLeft.y - bottomRight.y));
+	const double screenDiagonal = sqrt((ofGetViewportWidth() * ofGetViewportWidth()) + (ofGetViewportHeight() * ofGetViewportHeight()));
+
+	const double scaleCameraWidth = ofGetViewportWidth() / (bottomRight.x - topLeft.x);   
+	const double scaleCameraHeight = ofGetViewportHeight() / (bottomRight.y - topLeft.y);
+
+	const double scaleCameraToScreen = screenDiagonal / cameraDiagonal; // if same aspect ratio
+
+	//topLeft is 0,0 in our world but topLeft in the camera world.
+	// so when we get a cameraValue at topleft, when we convert it it should come out to 0,0
+
+	ofVec2f scaledTopLeft = ofVec2f(topLeft);
+	scaledTopLeft.x *= scaleCameraWidth;
+	scaledTopLeft.y *= scaleCameraHeight;
+
+	ofVec2f convertedPoint = ofVec2f();
+
+	convertedPoint.x = cameraPoint.x * scaleCameraWidth - scaledTopLeft.x;
+	convertedPoint.y = cameraPoint.y * scaleCameraHeight - scaledTopLeft.y;
+
+	return convertedPoint;
+}
+
+int ofApp::getModifiedX(int cameraX) {
+
+	if (cameraX < topLeft.x) {
+		return -100;
+	}
+
+	if (cameraX > topRight.x) {
+		return 100;
+	}
+
+	float scale = ofGetViewportWidth() / (topRight.x - topLeft.x);
+	float offset = topLeft.x; // subtract this?
+}
+
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
 	ofLog(OF_LOG_VERBOSE, "%d", key);
 
 	if (key == 32) { // space
-		findBlueSquare();
+		Calibrate();
+		state++;
+	}
+
+	if (state >= 4) {
+		calibrated = true;
 	}
 
 	if (key == 120) { // x
@@ -230,28 +338,29 @@ void ofApp::mouseDragged(int x, int y, int button){
 void ofApp::mousePressed(int x, int y, int button){
 
 	takePicture = true;
-	const ofVec2f curr = ofVec2f(x, y);
-	switch(state++ % 4) {
-	case 0:
-		ofLogVerbose("setting top left");
-		topLeft = curr;
-		break;
-	case 1:
-		ofLogVerbose("setting top right");
-		topRight = curr;
-		break;
-	case 2:
-		ofLogVerbose("setting bottom right");
-		bottomRight = curr;
-		break;
-	case 3:
-		ofLogVerbose("setting bottom left");
-		bottomLeft = curr;
-		break;
-	default:
-		ofLogVerbose("shit is broken");
-		break;
+
+}
+
+void ofApp::Calibrate()
+{
+	HRESULT hr;
+	IColorFrame* colorFrame;
+	hr = colorFrameReader->AcquireLatestFrame(&colorFrame);
+	if (SUCCEEDED(hr)) {
+		hr = colorFrame->CopyConvertedFrameDataToArray(colorBuffer.size(), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra);
+
+		if (SUCCEEDED(hr)) {
+
+			findBlueSquare();
+			setCorner();
+		}
 	}
+	else {
+		ofLogError("didn't get latest frame");
+	}
+
+	if(colorFrame)
+		colorFrame->Release();
 }
 
 //--------------------------------------------------------------
