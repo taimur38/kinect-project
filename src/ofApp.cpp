@@ -45,9 +45,12 @@ void ofApp::setup(){
 	fd->get_BytesPerPixel(&bpp);
 	colorBuffer.resize(px_width * px_height * bpp);
 	patternBuffer.resize(px_width * px_height * bpp);
+	copyBuffer.resize(px_width * px_height * bpp);
 
 	//img.allocate(px_width * bpp, px_height * bpp, ofImageType::OF_IMAGE_COLOR);
 	texture.allocate(px_width, px_height, GL_RGBA);
+	img.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
+	//pixelz.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 
 	boxaroo.loadImage("navy.png");
 }
@@ -59,12 +62,36 @@ void ofApp::update() {
 
 		HRESULT hr;
 		IColorFrame* colorFrame;
+		int fuckups = 0;
+		int goodones = 0;
 		hr = colorFrameReader->AcquireLatestFrame(&colorFrame);
 		if (SUCCEEDED(hr)) {
 			hr = colorFrame->CopyConvertedFrameDataToArray(colorBuffer.size(), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra);
 
-			//TODO: loop through colorBuffer, get new x/y pos, write values to new buffer, and load THAT one.
-			texture.loadData(&patternBuffer[0], px_width, px_height, GL_BGRA);
+			//TODO: loop through colorBuffer, get new x/y pos, write values to new buffer, and load THAT one in texture
+
+			for (int i = 0; i < colorBuffer.size(); i += 4) {
+				int offsetPosition = convertIndex(i);
+				if (offsetPosition < 0) {
+					continue;
+				}
+				if (offsetPosition + 3 >= copyBuffer.size()) {
+					fuckups++;
+					continue;
+				}
+				else {
+					goodones++;
+				}
+
+				copyBuffer[offsetPosition] = colorBuffer[i];
+				copyBuffer[offsetPosition + 1] = colorBuffer[i + 1];
+				copyBuffer[offsetPosition + 2] = colorBuffer[i + 2];
+				copyBuffer[offsetPosition + 3] = colorBuffer[i + 3];
+			}
+
+			texture.loadData(&copyBuffer[0], newWidth, newHeight, GL_BGRA);
+			texture.readToPixels(pixelz);
+			img.setFromPixels(pixelz);
 		}
 		else {
 			ofLogError("didn't get latest frame");
@@ -75,6 +102,7 @@ void ofApp::update() {
 	}
 
 }
+
 
 void ofApp::setCorner() {
 
@@ -143,7 +171,15 @@ void ofApp::draw() {
 	w = ofGetViewportWidth();
 	h = ofGetViewportHeight();
 
-	boxaroo.draw(w * (state%2) - s/2, h * (state/2) - s/2, s, s); // place square. top left, top right, bottom left, bottom right.
+	if (!calibrated)
+		boxaroo.draw(w * (state % 2) - s / 2, h * (state / 2) - s / 2, s, s); // place square. top left, top right, bottom left, bottom right.
+	else {
+
+		img.draw(0, 0, 1920, 1080);
+
+		//texture.draw(0, 0);
+	}
+		//texture.draw(0, 0, 1920, 1080);
 }
 
 void ofApp::filter() {
@@ -170,6 +206,41 @@ void ofApp::filter() {
 	}
 
 }
+
+int ofApp::convertIndex(int incomingImage) {
+
+	// we know 4 corners. we know the x,y position that would have corresponded to.
+	// 
+
+	int originalXPosition = (incomingImage / 4) % px_width;
+	int originalYPosition = (incomingImage / 4) / px_width;
+
+	if (originalXPosition > topLeft.x)
+		return -1;
+	if(originalXPosition < topRight.x)
+		return -1;
+	if (originalYPosition < topLeft.y)
+		return -1;
+	if (originalYPosition > bottomRight.y)
+		return -1;
+
+	// were in the money zone 
+	// we know we need to 
+
+	int translatedX = originalXPosition - topRight.x;
+	int translatedY = originalYPosition - topRight.y;
+
+	// flip this guy. 0,0 => (newWidth, newHeight)
+
+	int flippedX = newWidth - translatedX;
+	//int flippedY = newHeight - translatedY;
+	int flippedY = translatedY;
+
+	// convert this to a buffer position.
+
+	return (flippedY * newWidth + flippedX) * 4;
+}
+
 
 ofVec2f ofApp::convertPoint(ofVec2f cameraPoint) {
 
@@ -221,18 +292,24 @@ void ofApp::keyPressed(int key){
 
 	ofLog(OF_LOG_VERBOSE, "%d", key);
 
-	if (key == 32) { // space
+	if (key == 32 && !calibrated) { // space
 		Calibrate();
 		state++;
 	}
 
-	if (state >= 4) {
+	if (state == 4) {
 		calibrated = true;
+		newWidth = std::abs(topRight.x - topLeft.x);
+		newHeight = std::abs(topRight.y - bottomRight.y);
+
+		copyBuffer.resize(newWidth * newHeight * 4);
+		img.allocate(newWidth, newHeight, ofImageType::OF_IMAGE_COLOR);
+		//copyBufferSize = newWidth * newHeight * 4;
 	}
 
-	if (key == 120) { // x
+	/*if (key == 120) { // x
 		colorBuffer.clear();
-	}
+	}*/
 }
 
 void ofApp::findBlueSquare() {

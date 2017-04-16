@@ -30,7 +30,9 @@ class ofApp : public ofBaseApp{
 		void Calibrate();
 		int getModifiedX(int x);
 		ofVec2f convertPoint(ofVec2f cameraPoint);
-		
+
+		int convertIndex(int x);
+
 		IKinectSensor* kinect;
 		IColorFrameSource* colorFrameSource;
 		IColorFrameReader* colorFrameReader;
@@ -40,6 +42,8 @@ class ofApp : public ofBaseApp{
 		int px_height;
 		unsigned int bpp;
 
+		int newWidth;
+		int newHeight;
 
 		ofImage boxaroo;
 
@@ -59,7 +63,11 @@ class ofApp : public ofBaseApp{
 		vector<BYTE> colorBuffer;
 		unsigned int colorBufferSize;
 
+		vector<BYTE> copyBuffer;
+		unsigned int copyBufferSize;
+
+
+		ofFloatPixels pixelz;
 		ofTexture texture;
 		ofImage img;
-
 };
