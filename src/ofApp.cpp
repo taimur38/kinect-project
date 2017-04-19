@@ -5,6 +5,9 @@ void ofApp::setup(){
 
 	HRESULT hr;
 
+	ofSetFrameRate(30);
+
+	ofDisableArbTex();
 	ofSetBackgroundColor(ofColor::red);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 
@@ -49,6 +52,7 @@ void ofApp::setup(){
 
 	//img.allocate(px_width * bpp, px_height * bpp, ofImageType::OF_IMAGE_COLOR);
 	texture.allocate(px_width, px_height, GL_RGBA);
+	texture.enableMipmap();
 	img.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 	//pixelz.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 
@@ -64,13 +68,20 @@ void ofApp::update() {
 		IColorFrame* colorFrame;
 		int fuckups = 0;
 		int goodones = 0;
+		unsigned int size = 0;
+		byte* newbuff = nullptr;
 		hr = colorFrameReader->AcquireLatestFrame(&colorFrame);
 		if (SUCCEEDED(hr)) {
 			hr = colorFrame->CopyConvertedFrameDataToArray(colorBuffer.size(), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra);
+			//hr = colorFrame->AccessRawUnderlyingBuffer(&size, &newbuff);
 
-			//TODO: loop through colorBuffer, get new x/y pos, write values to new buffer, and load THAT one in texture
-
-			for (int i = 0; i < colorBuffer.size(); i += 4) {
+			if (!SUCCEEDED(hr)) {
+				ofLog(OF_LOG_ERROR, "couldnt access buffer");
+			}
+			// can i push this logic to shader? 
+			// not really if i want to make this a thing other peopel can use
+			//for (int i = 0; i < colorBuffer.size(); i += 4) {
+			for(int i = 0; i < colorBuffer.size(); i+=4) {
 				int offsetPosition = convertIndex(i);
 				if (offsetPosition < 0) {
 					continue;
@@ -87,11 +98,18 @@ void ofApp::update() {
 				copyBuffer[offsetPosition + 1] = colorBuffer[i + 1];
 				copyBuffer[offsetPosition + 2] = colorBuffer[i + 2];
 				copyBuffer[offsetPosition + 3] = colorBuffer[i + 3];
+				
+				/*
+				copyBuffer[offsetPosition] = newbuff[i];
+				copyBuffer[offsetPosition + 1] = newbuff[i + 1];
+				copyBuffer[offsetPosition + 2] = newbuff[i + 2];
+				copyBuffer[offsetPosition + 3] = newbuff[i + 3];
+				*/
 			}
 
 			texture.loadData(&copyBuffer[0], newWidth, newHeight, GL_BGRA);
-			texture.readToPixels(pixelz);
-			img.setFromPixels(pixelz);
+			//texture.readToPixels(pixelz);
+			//img.setFromPixels(pixelz);
 		}
 		else {
 			ofLogError("didn't get latest frame");
@@ -171,13 +189,15 @@ void ofApp::draw() {
 	w = ofGetViewportWidth();
 	h = ofGetViewportHeight();
 
-	if (!calibrated)
+	if (!calibrated) {
+		//ofLog(OF_LOG_VERBOSE, "state is: %d", state);
 		boxaroo.draw(w * (state % 2) - s / 2, h * (state / 2) - s / 2, s, s); // place square. top left, top right, bottom left, bottom right.
+	}
 	else {
 
-		img.draw(0, 0, 1920, 1080);
+		//img.draw(0, 0, 1920, 1080);
 
-		//texture.draw(0, 0);
+		texture.draw(0, 0, w, h);
 	}
 		//texture.draw(0, 0, 1920, 1080);
 }
@@ -242,35 +262,10 @@ int ofApp::convertIndex(int incomingImage) {
 }
 
 
-ofVec2f ofApp::convertPoint(ofVec2f cameraPoint) {
+// todo
+int ofApp::convertPoint(int originalXPosition, int originalYPosition) {
 
-	// assuming topleft,topright,bottomleft,bottomright are set.
-	// in practice we want to take things we see from camera and convert it into screen.
-
-	if (cameraPoint.x < topLeft.x || cameraPoint.x > topRight.x || cameraPoint.y < topLeft.y || cameraPoint.y > bottomRight.y)
-		return ofVec2f(-100, -100);
-
-	const double cameraDiagonal = sqrt(((topLeft.x - bottomRight.x) * (topLeft.x - bottomRight.x)) + (topLeft.y - bottomRight.y) * (topLeft.y - bottomRight.y));
-	const double screenDiagonal = sqrt((ofGetViewportWidth() * ofGetViewportWidth()) + (ofGetViewportHeight() * ofGetViewportHeight()));
-
-	const double scaleCameraWidth = ofGetViewportWidth() / (bottomRight.x - topLeft.x);   
-	const double scaleCameraHeight = ofGetViewportHeight() / (bottomRight.y - topLeft.y);
-
-	const double scaleCameraToScreen = screenDiagonal / cameraDiagonal; // if same aspect ratio
-
-	//topLeft is 0,0 in our world but topLeft in the camera world.
-	// so when we get a cameraValue at topleft, when we convert it it should come out to 0,0
-
-	ofVec2f scaledTopLeft = ofVec2f(topLeft);
-	scaledTopLeft.x *= scaleCameraWidth;
-	scaledTopLeft.y *= scaleCameraHeight;
-
-	ofVec2f convertedPoint = ofVec2f();
-
-	convertedPoint.x = cameraPoint.x * scaleCameraWidth - scaledTopLeft.x;
-	convertedPoint.y = cameraPoint.y * scaleCameraHeight - scaledTopLeft.y;
-
-	return convertedPoint;
+	return 1;
 }
 
 int ofApp::getModifiedX(int cameraX) {
@@ -285,6 +280,8 @@ int ofApp::getModifiedX(int cameraX) {
 
 	float scale = ofGetViewportWidth() / (topRight.x - topLeft.x);
 	float offset = topLeft.x; // subtract this?
+
+	return 0;
 }
 
 //--------------------------------------------------------------
@@ -293,15 +290,23 @@ void ofApp::keyPressed(int key){
 	ofLog(OF_LOG_VERBOSE, "%d", key);
 
 	if (key == 32 && !calibrated) { // space
-		Calibrate();
-		state++;
+		//while (state <= 4) {
+			ofLog(OF_LOG_VERBOSE, "calibrating...");
+			Calibrate();
+			ofLog(OF_LOG_VERBOSE, "done");
+			state++;
+			//draw();
+		//}
 	}
 
-	if (state == 4) {
+	if (state == 4 && !calibrated) {
 		calibrated = true;
 		newWidth = std::abs(topRight.x - topLeft.x);
 		newHeight = std::abs(topRight.y - bottomRight.y);
 
+		ofLog(OF_LOG_VERBOSE, "locations:\nTL: (%f, %f)\n TR: (%f, %f)\n BL: (%f, %f)\n BR: (%f, %f)", topLeft.x, topLeft.y, topRight.x, topRight.y, bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
+
+		//ofLog(OF_LOG_VERBOSE, "top left: %f, %f", topLeft.x, topLeft.y);
 		copyBuffer.resize(newWidth * newHeight * 4);
 		img.allocate(newWidth, newHeight, ofImageType::OF_IMAGE_COLOR);
 		//copyBufferSize = newWidth * newHeight * 4;

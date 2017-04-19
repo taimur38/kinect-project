@@ -29,7 +29,7 @@ class ofApp : public ofBaseApp{
 		void setCorner(); 
 		void Calibrate();
 		int getModifiedX(int x);
-		ofVec2f convertPoint(ofVec2f cameraPoint);
+		int convertPoint(int x, int y);
 
 		int convertIndex(int x);
 
