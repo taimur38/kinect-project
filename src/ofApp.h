@@ -38,9 +38,19 @@ class ofApp : public ofBaseApp{
 		IColorFrameReader* colorFrameReader;
 		IFrameDescription* fd;
 
+		IDepthFrameSource* depthFrameSource;
+		IDepthFrameReader* depthFrameReader;
+		IFrameDescription* depthFd;
+
+		ICoordinateMapper* cMapper;
+
 		int px_width;
 		int px_height;
 		unsigned int bpp;
+
+		int depth_width;
+		int depth_height;
+		unsigned int depth_bpp;
 
 		int newWidth;
 		int newHeight;
@@ -65,6 +75,10 @@ class ofApp : public ofBaseApp{
 
 		vector<BYTE> copyBuffer;
 		unsigned int copyBufferSize;
+
+		vector<unsigned short> depthBuffer;
+
+		vector<ColorSpacePoint> depth2xyz;
 
 
 		ofFloatPixels pixelz;

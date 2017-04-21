@@ -7,8 +7,9 @@ void ofApp::setup(){
 
 	ofSetFrameRate(30);
 
+	ofSetFullscreen(true);
 	ofDisableArbTex();
-	ofSetBackgroundColor(ofColor::red);
+	ofSetBackgroundColor(ofColor::black);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 
 	hr = GetDefaultKinectSensor(&kinect);
@@ -27,6 +28,7 @@ void ofApp::setup(){
 	ofLogVerbose("opened kinect");
 	
 	hr = kinect->get_ColorFrameSource(&colorFrameSource);
+	hr = kinect->get_DepthFrameSource(&depthFrameSource);
 	if (FAILED(hr)) {
 		ofLogError("init: error getting frame source");
 		return;
@@ -34,6 +36,7 @@ void ofApp::setup(){
 	ofLogVerbose("got frame source");
 
 	hr = colorFrameSource->OpenReader(&colorFrameReader);
+	hr = depthFrameSource->OpenReader(&depthFrameReader);
 
 	if (FAILED(hr)) {
 		ofLogError("init: error getting frame reader");
@@ -42,6 +45,10 @@ void ofApp::setup(){
 	ofLogVerbose("got frame reader");
 
 	colorFrameSource->CreateFrameDescription(ColorImageFormat::ColorImageFormat_Bgra, &fd);
+	depthFrameSource->get_FrameDescription(&depthFd);
+
+	kinect->get_CoordinateMapper(&cMapper);
+
 
 	fd->get_Width(&px_width);
 	fd->get_Height(&px_height);
@@ -50,13 +57,21 @@ void ofApp::setup(){
 	patternBuffer.resize(px_width * px_height * bpp);
 	copyBuffer.resize(px_width * px_height * bpp);
 
+	depthFd->get_Width(&depth_width);
+	depthFd->get_Height(&depth_height);
+	depthFd->get_BytesPerPixel(&depth_bpp);
+
+	depthBuffer.resize(depth_width*depth_height);
+	depth2xyz.resize(depth_width * depth_height);
+
 	//img.allocate(px_width * bpp, px_height * bpp, ofImageType::OF_IMAGE_COLOR);
 	texture.allocate(px_width, px_height, GL_RGBA);
 	texture.enableMipmap();
 	img.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 	//pixelz.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 
-	boxaroo.loadImage("navy.png");
+	//boxaroo.loadImage("navy.png");
+	boxaroo.loadImage("white.png");
 }
 
 //--------------------------------------------------------------
@@ -66,24 +81,44 @@ void ofApp::update() {
 
 		HRESULT hr;
 		IColorFrame* colorFrame;
+		IDepthFrame* depthFrame;
 		int fuckups = 0;
 		int goodones = 0;
+
 		unsigned int size = 0;
-		byte* newbuff = nullptr;
+		unsigned short* newbuff = nullptr;
 		hr = colorFrameReader->AcquireLatestFrame(&colorFrame);
+		//hr = depthFrameReader->AcquireLatestFrame(&depthFrame);
 		if (SUCCEEDED(hr)) {
 			hr = colorFrame->CopyConvertedFrameDataToArray(colorBuffer.size(), &colorBuffer[0], ColorImageFormat::ColorImageFormat_Bgra);
 			//hr = colorFrame->AccessRawUnderlyingBuffer(&size, &newbuff);
 
+			//hr = depthFrame->CopyFrameDataToArray(depthBuffer.size(), &depthBuffer[0]);
+
+			/*hr = depthFrame->AccessUnderlyingBuffer(&size, &newbuff);
+			hr = cMapper->MapDepthFrameToColorSpace(depth_width*depth_height, newbuff, depth_width*depth_height, &depth2xyz[0]);
+
+			unsigned short mDepth;
+			depthFrameSource->get_DepthMaxReliableDistance(&mDepth);
+			*/
+
+			//TODO: halfway through doing stuff with depth...
+			//might be time to refactor calibration as a class first.
 			if (!SUCCEEDED(hr)) {
 				ofLog(OF_LOG_ERROR, "couldnt access buffer");
 			}
 			// can i push this logic to shader? 
 			// not really if i want to make this a thing other peopel can use
-			//for (int i = 0; i < colorBuffer.size(); i += 4) {
-			for(int i = 0; i < colorBuffer.size(); i+=4) {
+			for (int i = 0; i < colorBuffer.size(); i += 4) {
+			//for(int i = 0; i < depth2xyz.size(); i++) {
+				//const int newIndex = (int)depth2xyz[i].X + (int)depth2xyz[i].Y * px_width;
 				int offsetPosition = convertIndex(i);
 				if (offsetPosition < 0) {
+					/*copyBuffer[newIndex] = 0;
+					copyBuffer[newIndex+ 1] = 0;
+					copyBuffer[offsetPosition + 2] = 0;
+					copyBuffer[offsetPosition + 3] = 255;
+					*/
 					continue;
 				}
 				if (offsetPosition + 3 >= copyBuffer.size()) {
@@ -100,10 +135,14 @@ void ofApp::update() {
 				copyBuffer[offsetPosition + 3] = colorBuffer[i + 3];
 				
 				/*
-				copyBuffer[offsetPosition] = newbuff[i];
-				copyBuffer[offsetPosition + 1] = newbuff[i + 1];
-				copyBuffer[offsetPosition + 2] = newbuff[i + 2];
-				copyBuffer[offsetPosition + 3] = newbuff[i + 3];
+				unsigned int d = newbuff[i];
+
+				auto mapped = (float)(std::min(d, (unsigned int)(mDepth))) / (float)mDepth / 255;
+				
+				copyBuffer[offsetPosition] = mapped;
+				copyBuffer[offsetPosition + 1] = mapped;
+				copyBuffer[offsetPosition + 2] = mapped;
+				copyBuffer[offsetPosition + 3] = 1;
 				*/
 			}
 
@@ -117,6 +156,10 @@ void ofApp::update() {
 
 		if (colorFrame)
 			colorFrame->Release();
+
+		/*if (depthFrame)
+			depthFrame->Release();
+			*/
 	}
 
 }
@@ -183,7 +226,7 @@ ofVec2f ofApp::getCenterOfBlueSquare() {
 void ofApp::draw() {
 
 	//texture.draw(0, 0);
-	int s = 400;
+	int s = 10;
 	int w = 1920;
 	int h = 1080;
 	w = ofGetViewportWidth();
@@ -324,6 +367,8 @@ void ofApp::findBlueSquare() {
 
 	patternBuffer = colorBuffer;
 
+	const int max = 255 * 3;
+
 	for (int x = 0; x < 5; x++) {
 
 		for (int i = (px_width + 1) * 4; i < colorBuffer.size() - (px_width + 1)*4; i += 4) {
@@ -334,55 +379,57 @@ void ofApp::findBlueSquare() {
 				const unsigned int a1_b = colorBuffer[i - (px_width + 1) * 4];
 				const unsigned int a1_g = colorBuffer[i - (px_width + 1) * 4 + 1];
 				const unsigned int a1_r = colorBuffer[i - (px_width + 1) * 4 + 2];
-				const double a1_ratio = (double)(a1_b) / (double)(a1_b + a1_g + a1_r);
+				const double a1_ratio = (double)(a1_b + a1_g + a1_r) / (double)(max);
+				//ofLog(OF_LOG_VERBOSE, "%f", a1_ratio);
 
 				const unsigned int a2_b = colorBuffer[i - px_width * 4];
 				const unsigned int a2_g = colorBuffer[i - px_width * 4 + 1];
 				const unsigned int a2_r = colorBuffer[i - px_width * 4 + 2];
-				const double a2_ratio = (double)(a2_b) / (double)(a2_b + a2_g + a2_r);
+				const double a2_ratio = (double)(a2_b + a1_g + a1_r) / (double)(max);
 
 				const unsigned int a3_b = colorBuffer[i - (px_width - 1) * 4];
 				const unsigned int a3_g = colorBuffer[i - (px_width - 1) * 4 + 1];
 				const unsigned int a3_r = colorBuffer[i - (px_width - 1) * 4 + 2];
-				const double a3_ratio = (double)(a3_b) / (double)(a3_b + a3_g + a3_r);
+				const double a3_ratio = (double)(a3_b + a3_g + a3_r) / (double)(max);
 
 				// current row of pixel
 				const unsigned int a4_b = colorBuffer[i - 4];
 				const unsigned int a4_g = colorBuffer[i - 3];
 				const unsigned int a4_r = colorBuffer[i - 2];
-				const double a4_ratio = (double)(a4_b) / (double)(a4_b + a4_g + a4_r);
+				const double a4_ratio = (double)(a4_b + a4_g + a4_r) / (double)(max);
 
 				const unsigned int a5_b = colorBuffer[i]; // center
 				const unsigned int a5_g = colorBuffer[i + 1]; // center
 				const unsigned int a5_r = colorBuffer[i + 2]; // center
-				const double a5_ratio = (double)(a5_b) / (double)(a5_b + a5_g + a5_r);
+				const double a5_ratio = (double)(a5_b + a5_g + a5_r) / (double)(max);
 
 				const unsigned int a6_b = colorBuffer[i + 4];
 				const unsigned int a6_g = colorBuffer[i + 5];
 				const unsigned int a6_r = colorBuffer[i + 6];
-				const double a6_ratio = (double)(a6_b) / (double)(a6_b + a6_g + a6_r);
+				const double a6_ratio = (double)(a6_b + a6_g + a6_r) / (double)(max);
 
 
 				// row below pixel
 				const unsigned int a7_b = colorBuffer[i + (px_width - 1) * 4 + 0];
 				const unsigned int a7_g = colorBuffer[i + (px_width - 1) * 4 + 1];
 				const unsigned int a7_r = colorBuffer[i + (px_width - 1) * 4 + 2];
-				const double a7_ratio = (double)(a7_b) / (double)(a7_b + a7_g + a7_r);
+				const double a7_ratio = (double)(a7_b + a7_g + a7_r) / (double)(max);
 
 				const unsigned int a8_b = colorBuffer[i + px_width * 4 + 0];
 				const unsigned int a8_g = colorBuffer[i + px_width * 4 + 1];
 				const unsigned int a8_r = colorBuffer[i + px_width * 4 + 2];
-				const double a8_ratio = (double)(a8_b) / (double)(a8_b + a8_g + a8_r);
+				const double a8_ratio = (double)(a8_b + a8_g + a8_r) / (double)(max);
 
 				const unsigned int a9_b = colorBuffer[i + (px_width + 1) * 4 + 0];
 				const unsigned int a9_g = colorBuffer[i + (px_width + 1) * 4 + 1];
 				const unsigned int a9_r = colorBuffer[i + (px_width + 1) * 4 + 2];
-				const double a9_ratio = (double)(a9_b) / (double)(a9_b + a9_g + a9_r);
+				const double a9_ratio = (double)(a9_b + a9_g + a9_r) / (double)(max);
 
-				if (a1_ratio + a2_ratio + a3_ratio + a4_ratio + a6_ratio + a7_ratio + a8_ratio + a9_ratio > (.4/(x+1) * 8) && a5_ratio > 0.5) {
+				//if (a1_ratio + a2_ratio + a3_ratio + a4_ratio + a6_ratio + a7_ratio + a8_ratio + a9_ratio > (.6 * 8) && a5_ratio > 0.5) {
+				if(a5_ratio > 0.8) { 
 					patternBuffer[i] = 255;
-					patternBuffer[i + 1] = 0;
-					patternBuffer[i + 2] = 0;
+					patternBuffer[i + 1] = 255;
+					patternBuffer[i + 2] = 255;
 					patternBuffer[i + 3] = 255;
 				}
 				else {
@@ -435,6 +482,7 @@ void ofApp::Calibrate()
 
 			findBlueSquare();
 			setCorner();
+			//texture.loadData(&colorBuffer[0], px_width, px_height, GL_BGRA);
 		}
 	}
 	else {
