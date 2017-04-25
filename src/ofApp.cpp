@@ -89,34 +89,38 @@ void ofApp::update() {
 		if (colorBuffer.size() != depth_width * depth_height * 4) {
 			colorBuffer.resize(depth_width * depth_height * 4);
 		}
-		int avgDist = 0;
-		int avgCount = 0;
-		for (int i = 0; i < depthBuffer.size(); i++) {
-			int depth = depthBuffer[i];
-			if (depth > 0) {
-				avgDist += depth;
-				avgCount++;
-			}
 
-		}
+		unsigned short maxDist = 0;
+
+		for (int i = 0; i < depthBuffer.size(); i++)
+			if (depthBuffer[i] > maxDist)
+				maxDist = depthBuffer[i];
+
 
 		for (int i = 0; i < depthBuffer.size(); i++) {
-			int depth = depthBuffer[i];
-			if (depth < avgDist && depth > 0) {
-				colorBuffer[i * 4] = 255;
-				colorBuffer[i * 4 + 1] = 255;
-				colorBuffer[i * 4 + 2] = 255;
-				colorBuffer[i * 4 + 3] = 255;
-			}
-			else {
+			unsigned short depth = depthBuffer[i];
+			if(depth == 0) {
 				colorBuffer[i * 4] = 0;
 				colorBuffer[i * 4 + 1] = 0;
 				colorBuffer[i * 4 + 2] = 0;
 				colorBuffer[i * 4 + 3] = 255;
 			}
+			else if (depth < maxDist * .9 ) {
+				float depthRatio = ((float)depth) / maxDist;
+				colorBuffer[i * 4] = depthRatio*255;
+				colorBuffer[i * 4 + 1] = depthRatio*255;
+				colorBuffer[i * 4 + 2] = depthRatio*255;
+				colorBuffer[i * 4 + 3] = 255;
+			}
+			else {
+				colorBuffer[i * 4] = 0;
+				colorBuffer[i * 4 + 1] = 255;
+				colorBuffer[i * 4 + 2] = 0;
+				colorBuffer[i * 4 + 3] = 255;
+			}
 		}
 
-		texture.loadData(&colorBuffer[0], depth_width, depth_height, GL_BGRA);
+		texture.loadData(&colorBuffer[0], calibrater->getMappedWidth(), calibrater->getMappedHeight(), GL_BGRA);
 
 		if (df)
 			df->Release();

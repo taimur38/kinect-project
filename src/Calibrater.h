@@ -22,6 +22,9 @@ public:
 
 	vector<unsigned short>& getMappedDepthFrame(IDepthFrame** depthFrame);
 
+	int getMappedWidth();
+	int getMappedHeight();
+
 	void getColorBuffer(IColorFrame** cf, vector<BYTE>& inputVector);
 	void getDepthBuffer(IDepthFrame** df, unsigned short** depthBuff, unsigned int* size);
 

@@ -49,6 +49,14 @@ Calibrater::Calibrater(IKinectSensor* _kinect) {
 
 }
 
+int Calibrater::getMappedWidth() {
+	return newWidth;
+}
+
+int Calibrater::getMappedHeight() {
+	return newHeight;
+}
+
 vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame) {
 
 	unsigned int depthSize = 0;
@@ -56,12 +64,26 @@ vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame
 
 	getDepthBuffer(depthFrame, &depthBuff, &depthSize);
 
+	USHORT maxDepth = 0;
+	USHORT minDepth = 100000;
+	(*depthFrame)->get_DepthMaxReliableDistance(&maxDepth);
+	(*depthFrame)->get_DepthMinReliableDistance(&minDepth);
+
+
+	int fuckups = 0;
 	std::fill(depthBuffer.begin(), depthBuffer.end(), 0);
 	for (int i = 0; i < depthSize; i++) {
 		unsigned short depth = depthBuff[i];
 		int mappedIndex = convertIndex(i);
-		if(mappedIndex > -1)
-			depthBuffer[mappedIndex] = depth;
+		if (mappedIndex > -1) {
+			unsigned short happyDepth = depth > minDepth ? (depth < maxDepth ? depth : 0) : 0;
+			if (mappedIndex >= depthBuffer.size())
+			{
+				fuckups++;
+				continue;
+			}
+			depthBuffer[mappedIndex] = happyDepth;
+		}
 	}
 
 	return depthBuffer;
@@ -82,8 +104,16 @@ void Calibrater::Calibrate() {
 
 	cornersCalibrated++;
 
+	if (cornersCalibrated == 4)
+	{
+		newWidth = std::abs(corners.topLeft.x - corners.topRight.x);
+		newHeight = std::abs(corners.bottomRight.y - corners.topRight.y);
+		depthBuffer.resize(newWidth*newHeight);
+	}
+
 	if (colorFrame)
 		colorFrame->Release();
+
 
 }
 
@@ -106,9 +136,8 @@ int Calibrater::convertIndex(int incomingImage) {
 	// we know 4 corners. we know the x,y position that would have corresponded to.
 	// 
 
-	//TODO: we should only be dealing with depth width and depth height.
-	int originalXPosition = (incomingImage / 4) % color_width;
-	int originalYPosition = (incomingImage / 4) / color_width;
+	int originalXPosition = (incomingImage) % depth_width;
+	int originalYPosition = (incomingImage) / depth_width;
 
 	if (originalXPosition > corners.topLeft.x)
 		return -1;
@@ -133,7 +162,7 @@ int Calibrater::convertIndex(int incomingImage) {
 
 	// convert this to a buffer position.
 
-	return (flippedY * newWidth + flippedX) * 4;
+	return (flippedY * newWidth + flippedX);
 }
 
 void Calibrater::setCorner() {
