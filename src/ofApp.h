@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ofMain.h"
+#include "Calibrater.h"
 #include "Kinect.h"
 
 class ofApp : public ofBaseApp{
@@ -22,16 +23,9 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
 
-		void filter(); // unused - see findBlueSquare
-
-		void findBlueSquare();
-		ofVec2f getCenterOfBlueSquare();
-		void setCorner(); 
 		void Calibrate();
-		int getModifiedX(int x);
-		int convertPoint(int x, int y);
 
-		int convertIndex(int x);
+		Calibrater* calibrater = nullptr;
 
 		IKinectSensor* kinect;
 		IColorFrameSource* colorFrameSource;
@@ -70,8 +64,11 @@ class ofApp : public ofBaseApp{
 		vector<BYTE> patternBuffer;
 		unsigned int patternBufferSize;
 
+		vector<BYTE> rawColorBuffer;
 		vector<BYTE> colorBuffer;
 		unsigned int colorBufferSize;
+
+		vector<DepthSpacePoint> colorToDepthBuffer;
 
 		vector<BYTE> copyBuffer;
 		unsigned int copyBufferSize;
@@ -79,7 +76,7 @@ class ofApp : public ofBaseApp{
 		vector<unsigned short> depthBuffer;
 
 		vector<ColorSpacePoint> depth2xyz;
-
+		ColorSpacePoint *depth2rgb = nullptr;
 
 		ofFloatPixels pixelz;
 		ofTexture texture;
