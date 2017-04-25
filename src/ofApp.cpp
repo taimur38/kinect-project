@@ -14,7 +14,6 @@ void ofApp::setup(){
 
 	hr = GetDefaultKinectSensor(&kinect);
 
-	ofLogVerbose("HELLO");
 	if (FAILED(hr)) {
 		ofLogError("couldnt get kinect");
 		return;
@@ -70,6 +69,7 @@ void ofApp::setup(){
 
 	texture.allocate(depth_width, depth_height, GL_RGBA);
 	texture.enableMipmap();
+
 	img.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 	//pixelz.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 
@@ -81,22 +81,47 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update() {
 
-	/*
 	if (calibrated) {
 
-		unsigned int depthSize = 0;
-		unsigned short* depthBuff = nullptr;
-		IDepthFrame* df = nullptr;
-		IColorFrame* cf = nullptr;
+		IDepthFrame* df;
+		depthBuffer = calibrater->getMappedDepthFrame(&df);
 
-		getDepthBuffer(&df, &depthBuff, &depthSize);
+		if (colorBuffer.size() != depth_width * depth_height * 4) {
+			colorBuffer.resize(depth_width * depth_height * 4);
+		}
+		int avgDist = 0;
+		int avgCount = 0;
+		for (int i = 0; i < depthBuffer.size(); i++) {
+			int depth = depthBuffer[i];
+			if (depth > 0) {
+				avgDist += depth;
+				avgCount++;
+			}
+
+		}
+
+		for (int i = 0; i < depthBuffer.size(); i++) {
+			int depth = depthBuffer[i];
+			if (depth < avgDist && depth > 0) {
+				colorBuffer[i * 4] = 255;
+				colorBuffer[i * 4 + 1] = 255;
+				colorBuffer[i * 4 + 2] = 255;
+				colorBuffer[i * 4 + 3] = 255;
+			}
+			else {
+				colorBuffer[i * 4] = 0;
+				colorBuffer[i * 4 + 1] = 0;
+				colorBuffer[i * 4 + 2] = 0;
+				colorBuffer[i * 4 + 3] = 255;
+			}
+		}
+
+		texture.loadData(&colorBuffer[0], depth_width, depth_height, GL_BGRA);
 
 		if (df)
 			df->Release();
-		if (cf)
-			cf->Release();
+
 	}
-	*/
 }
 
 //--------------------------------------------------------------

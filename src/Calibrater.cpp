@@ -49,9 +49,22 @@ Calibrater::Calibrater(IKinectSensor* _kinect) {
 
 }
 
-void Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame, unsigned short** depthBuff, unsigned int* size) {
+vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame) {
 
-	
+	unsigned int depthSize = 0;
+	unsigned short* depthBuff = nullptr;
+
+	getDepthBuffer(depthFrame, &depthBuff, &depthSize);
+
+	std::fill(depthBuffer.begin(), depthBuffer.end(), 0);
+	for (int i = 0; i < depthSize; i++) {
+		unsigned short depth = depthBuff[i];
+		int mappedIndex = convertIndex(i);
+		if(mappedIndex > -1)
+			depthBuffer[mappedIndex] = depth;
+	}
+
+	return depthBuffer;
 
 }
 
@@ -136,15 +149,15 @@ void Calibrater::setCorner() {
 		corners.topRight = getCenterOfSquare();
 		ofLog(OF_LOG_VERBOSE, "top right: %f, %f", corners.topRight.x, corners.topRight.y);
 		break;
-	case 3:
-		ofLog(OF_LOG_VERBOSE, "setting bottom right");
-		corners.bottomRight = getCenterOfSquare();
-		ofLog(OF_LOG_VERBOSE, "top left: %f, %f", corners.bottomRight.x, corners.bottomRight.y);
-		break;
 	case 2:
 		ofLog(OF_LOG_VERBOSE, "setting bottom left");
 		corners.bottomLeft = getCenterOfSquare();
 		ofLog(OF_LOG_VERBOSE, "bottom left: %f, %f", corners.bottomLeft.x, corners.bottomLeft.y);
+		break;
+	case 3:
+		ofLog(OF_LOG_VERBOSE, "setting bottom right");
+		corners.bottomRight = getCenterOfSquare();
+		ofLog(OF_LOG_VERBOSE, "bottom right: %f, %f", corners.bottomRight.x, corners.bottomRight.y);
 		break;
 	}
 

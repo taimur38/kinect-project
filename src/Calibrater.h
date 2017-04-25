@@ -20,7 +20,7 @@ public:
 	void Calibrate();
 	void Draw();
 
-	void getMappedDepthFrame(IDepthFrame** depthFrame, unsigned short** depthBuff, unsigned int* size);
+	vector<unsigned short>& getMappedDepthFrame(IDepthFrame** depthFrame);
 
 	void getColorBuffer(IColorFrame** cf, vector<BYTE>& inputVector);
 	void getDepthBuffer(IDepthFrame** df, unsigned short** depthBuff, unsigned int* size);
@@ -56,7 +56,7 @@ private:
 	vector<BYTE> mappedColorBuffer;
 	vector<BYTE> filteredColorBuffer;
 	vector<DepthSpacePoint> colorToDepthBuffer;
-	vector<unsigned short*> depthBuffer;
+	vector<unsigned short> depthBuffer;
 
 	bool calibrated = false;
 	Corners corners;
