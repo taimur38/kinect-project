@@ -28,6 +28,8 @@ public:
 	void getColorBuffer(IColorFrame** cf, vector<BYTE>& inputVector);
 	void getDepthBuffer(IDepthFrame** df, unsigned short** depthBuff, unsigned int* size);
 
+	void setCorners(Corners _corners);
+
 	int convertIndex(int x);
 
 private:

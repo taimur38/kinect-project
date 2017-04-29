@@ -76,8 +76,18 @@ void ofApp::setup(){
 	//boxaroo.loadImage("navy.png");
 	boxaroo.loadImage("white.png");
 	calibrater = new Calibrater(kinect);
+
+	auto corners = Corners();
+	corners.bottomLeft = ofVec2f(418, 210);
+	corners.bottomRight = ofVec2f(156, 195);
+	corners.topLeft = ofVec2f(422, 68);
+	corners.topRight = ofVec2f(167, 49);
+
+	calibrater->setCorners(corners);
+	calibrated = true;
 }
 
+int zones = 4;
 //--------------------------------------------------------------
 void ofApp::update() {
 
@@ -99,25 +109,42 @@ void ofApp::update() {
 
 		for (int i = 0; i < depthBuffer.size(); i++) {
 			unsigned short depth = depthBuffer[i];
-			if(depth == 0) {
+			int zonedDepth = (depth / 20) % zones;
+
+			if (depth == 0 || depth > .9 * maxDist) {
 				colorBuffer[i * 4] = 0;
 				colorBuffer[i * 4 + 1] = 0;
 				colorBuffer[i * 4 + 2] = 0;
 				colorBuffer[i * 4 + 3] = 255;
+				continue;
 			}
-			else if (depth < maxDist * .9 ) {
-				float depthRatio = ((float)depth) / maxDist;
-				colorBuffer[i * 4] = depthRatio*255;
-				colorBuffer[i * 4 + 1] = depthRatio*255;
-				colorBuffer[i * 4 + 2] = depthRatio*255;
-				colorBuffer[i * 4 + 3] = 255;
+			switch (zonedDepth) {
+				case 0:
+					colorBuffer[i * 4] = 255;
+					colorBuffer[i * 4 + 1] = 0;
+					colorBuffer[i * 4 + 2] = 0;
+					colorBuffer[i * 4 + 3] = 255;
+					break;
+				case 1:
+					colorBuffer[i * 4] = 0;
+					colorBuffer[i * 4 + 1] = 255;
+					colorBuffer[i * 4 + 2] = 0;
+					colorBuffer[i * 4 + 3] = 255;
+					break;
+				case 2:
+					colorBuffer[i * 4] = 0;
+					colorBuffer[i * 4 + 1] = 0;
+					colorBuffer[i * 4 + 2] = 255;
+					colorBuffer[i * 4 + 3] = 255;
+					break;
+				case 3:
+					colorBuffer[i * 4] = 0;
+					colorBuffer[i * 4 + 1] = 255;
+					colorBuffer[i * 4 + 2] = 255;
+					colorBuffer[i * 4 + 3] = 255;
+					break;
 			}
-			else {
-				colorBuffer[i * 4] = 0;
-				colorBuffer[i * 4 + 1] = 255;
-				colorBuffer[i * 4 + 2] = 0;
-				colorBuffer[i * 4 + 3] = 255;
-			}
+
 		}
 
 		texture.loadData(&colorBuffer[0], calibrater->getMappedWidth(), calibrater->getMappedHeight(), GL_BGRA);

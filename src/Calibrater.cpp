@@ -57,6 +57,15 @@ int Calibrater::getMappedHeight() {
 	return newHeight;
 }
 
+void Calibrater::setCorners(Corners _corners) {
+	this->corners = _corners;
+	this->calibrated = true;
+
+	newWidth = std::abs(corners.topLeft.x - corners.topRight.x);
+	newHeight = std::abs(corners.bottomRight.y - corners.topRight.y);
+	depthBuffer.resize(newWidth*newHeight);
+}
+
 vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame) {
 
 	unsigned int depthSize = 0;
@@ -425,7 +434,7 @@ void Calibrater::getDepthBuffer(IDepthFrame** depthFrame, unsigned short** depth
 	int attempts = 0;
 	do {
 		if (attempts++ > 0) {
-			ofLog(OF_LOG_VERBOSE, "depthbuffer attempts: %d", attempts);
+			//ofLog(OF_LOG_VERBOSE, "depthbuffer attempts: %d", attempts);
 		}
 
 		hr = depthFrameReader->AcquireLatestFrame(depthFrame);
