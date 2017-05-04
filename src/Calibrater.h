@@ -31,6 +31,7 @@ public:
 	void setCorners(Corners _corners);
 
 	int convertIndex(int x, short d);
+	int avgCalibrationDepth = 0;
 
 private:
 	IKinectSensor* kinect;

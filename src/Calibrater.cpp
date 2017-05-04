@@ -64,6 +64,9 @@ void Calibrater::setCorners(Corners _corners) {
 	newWidth = std::abs(corners.topLeft.x - corners.topRight.x);
 	newHeight = std::abs(corners.bottomRight.y - corners.topRight.y);
 	depthBuffer.resize(newWidth*newHeight);
+
+	avgCalibrationDepth = (corners.bottomLeft.z + corners.bottomRight.z + corners.topLeft.z + corners.topRight.z) / 4;
+	ofLog(OF_LOG_VERBOSE, "avg calibration depth %d", avgCalibrationDepth);
 }
 
 vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame) {
@@ -83,15 +86,17 @@ vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame
 	std::fill(depthBuffer.begin(), depthBuffer.end(), 0);
 	for (int i = 0; i < depthSize; i++) {
 		unsigned short depth = depthBuff[i];
-		int mappedIndex = convertIndex(i, depth);
-		if (mappedIndex > -1) {
-			unsigned short happyDepth = depth > minDepth ? (depth < maxDepth ? depth : 0) : 0;
-			if (mappedIndex >= depthBuffer.size())
-			{
-				fuckups++;
-				continue;
+		if (depth > minDepth && depth < maxDepth) {
+			int mappedIndex = convertIndex(i, depth);
+			if (mappedIndex > -1) {
+				unsigned short happyDepth = depth > minDepth ? (depth < maxDepth ? depth : 0) : 0;
+				if (mappedIndex >= depthBuffer.size())
+				{
+					fuckups++;
+					continue;
+				}
+				depthBuffer[mappedIndex] = happyDepth;
 			}
-			depthBuffer[mappedIndex] = happyDepth;
 		}
 	}
 
@@ -124,6 +129,9 @@ void Calibrater::Calibrate() {
 		newWidth = std::abs(corners.topLeft.x - corners.topRight.x);
 		newHeight = std::abs(corners.bottomRight.y - corners.topRight.y);
 		depthBuffer.resize(newWidth*newHeight);
+
+		avgCalibrationDepth = (corners.bottomLeft.z + corners.bottomRight.z + corners.topLeft.z + corners.topRight.z) / 4;
+		ofLog(OF_LOG_VERBOSE, "avg calibration depth %d", avgCalibrationDepth);
 	}
 
 	if (colorFrame)
@@ -156,8 +164,6 @@ int Calibrater::convertIndex(int incomingImage, short incomingDepth) {
 	int originalXPosition = (incomingImage) % depth_width;
 	int originalYPosition = (incomingImage) / depth_width;
 
-	int avgDepth = (corners.bottomLeft.z + corners.bottomRight.z + corners.topRight.z + corners.topLeft.z) / 4;
-
 	if (originalXPosition > corners.topLeft.x)
 		return -1;
 	if(originalXPosition < corners.topRight.x)
@@ -179,7 +185,8 @@ int Calibrater::convertIndex(int incomingImage, short incomingDepth) {
 	//int flippedY = newHeight - translatedY;
 	int flippedY = translatedY;
 
-	int scaledY = flippedY * (avgDepth / (double)incomingDepth);
+	//int scaledY = flippedY * (avgCalibrationDepth / (double)incomingDepth);
+	int scaledY = flippedY * ((double)incomingDepth) / avgCalibrationDepth;
 
 	// convert this to a buffer position.
 

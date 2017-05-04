@@ -102,18 +102,13 @@ void ofApp::update() {
 			colorBuffer.resize(w * h * 4);
 		}
 
-		unsigned short maxDist = 0;
-
-		for (int i = 0; i < depthBuffer.size(); i++)
-			if (depthBuffer[i] > maxDist)
-				maxDist = depthBuffer[i];
-
+		int maxDist = calibrater->avgCalibrationDepth;
 
 		for (int i = 0; i < depthBuffer.size(); i++) {
 			unsigned short depth = depthBuffer[i];
 			int zonedDepth = (depth / 20) % zones;
 
-			if (depth == 0 || depth > .9 * maxDist) {
+			if (depth == 0 || depth > .95 * maxDist) {
 				colorBuffer[i * 4] = 0;
 				colorBuffer[i * 4 + 1] = 0;
 				colorBuffer[i * 4 + 2] = 0;
