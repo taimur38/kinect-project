@@ -83,7 +83,7 @@ vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame
 	std::fill(depthBuffer.begin(), depthBuffer.end(), 0);
 	for (int i = 0; i < depthSize; i++) {
 		unsigned short depth = depthBuff[i];
-		int mappedIndex = convertIndex(i);
+		int mappedIndex = convertIndex(i, depth);
 		if (mappedIndex > -1) {
 			unsigned short happyDepth = depth > minDepth ? (depth < maxDepth ? depth : 0) : 0;
 			if (mappedIndex >= depthBuffer.size())
@@ -106,10 +106,16 @@ void Calibrater::Calibrate() {
 	//std::fill(mappedColorBuffer.begin(), mappedColorBuffer.end(), 0);
 
 	getColorBuffer(&colorFrame, mappedColorBuffer);
+
+	unsigned int depthSize = 0;
+	unsigned short* depthBuff = nullptr;
+	IDepthFrame* df = nullptr;
+
+	getDepthBuffer(&df, &depthBuff, &depthSize);
 	//devTexture.loadData(&mappedColorBuffer[0], depth_width, depth_height, GL_BGRA);
 
 	findSquare();
-	setCorner();
+	setCorner(depthBuff);
 
 	cornersCalibrated++;
 
@@ -122,6 +128,8 @@ void Calibrater::Calibrate() {
 
 	if (colorFrame)
 		colorFrame->Release();
+	if (df)
+		df->Release();
 
 
 }
@@ -140,13 +148,15 @@ void Calibrater::Draw() {
 	}
 }
 
-int Calibrater::convertIndex(int incomingImage) {
+int Calibrater::convertIndex(int incomingImage, short incomingDepth) {
 
 	// we know 4 corners. we know the x,y position that would have corresponded to.
 	// 
 
 	int originalXPosition = (incomingImage) % depth_width;
 	int originalYPosition = (incomingImage) / depth_width;
+
+	int avgDepth = (corners.bottomLeft.z + corners.bottomRight.z + corners.topRight.z + corners.topLeft.z) / 4;
 
 	if (originalXPosition > corners.topLeft.x)
 		return -1;
@@ -169,32 +179,34 @@ int Calibrater::convertIndex(int incomingImage) {
 	//int flippedY = newHeight - translatedY;
 	int flippedY = translatedY;
 
+	int scaledY = flippedY * (avgDepth / (double)incomingDepth);
+
 	// convert this to a buffer position.
 
-	return (flippedY * newWidth + flippedX);
+	return (scaledY * newWidth + flippedX);
 }
 
-void Calibrater::setCorner() {
+void Calibrater::setCorner(unsigned short* depthBuff) {
 
 	switch (cornersCalibrated % 4) {
 	case 0:
 		ofLog(OF_LOG_VERBOSE, "setting top left");
-		corners.topLeft = getCenterOfSquare();
+		corners.topLeft = getCenterOfSquare(depthBuff);
 		ofLog(OF_LOG_VERBOSE, "top left: %f, %f", corners.topLeft.x, corners.topLeft.y);
 		break;
 	case 1:
 		ofLog(OF_LOG_VERBOSE, "setting top right");
-		corners.topRight = getCenterOfSquare();
+		corners.topRight = getCenterOfSquare(depthBuff);
 		ofLog(OF_LOG_VERBOSE, "top right: %f, %f", corners.topRight.x, corners.topRight.y);
 		break;
 	case 2:
 		ofLog(OF_LOG_VERBOSE, "setting bottom left");
-		corners.bottomLeft = getCenterOfSquare();
+		corners.bottomLeft = getCenterOfSquare(depthBuff);
 		ofLog(OF_LOG_VERBOSE, "bottom left: %f, %f", corners.bottomLeft.x, corners.bottomLeft.y);
 		break;
 	case 3:
 		ofLog(OF_LOG_VERBOSE, "setting bottom right");
-		corners.bottomRight = getCenterOfSquare();
+		corners.bottomRight = getCenterOfSquare(depthBuff);
 		ofLog(OF_LOG_VERBOSE, "bottom right: %f, %f", corners.bottomRight.x, corners.bottomRight.y);
 		break;
 	}
@@ -315,7 +327,7 @@ void Calibrater::findSquare() {
 	//}
 }
 
-ofVec2f Calibrater::getCenterOfSquare() {
+ofVec3f Calibrater::getCenterOfSquare(unsigned short* depthBuff) {
 	
 	double avg_x = 0;
 	double avg_y = 0;
@@ -342,7 +354,9 @@ ofVec2f Calibrater::getCenterOfSquare() {
 	ofLog(OF_LOG_VERBOSE, "px_width: %d, px_height: %d, blues: %d", color_width, color_height, blues);
 
 	ofLog(OF_LOG_VERBOSE, "(%f, %f)", avg_x, avg_y);
-	return ofVec2f(avg_x, avg_y);
+
+	int index = avg_y * depth_width + avg_x;
+	return ofVec3f(avg_x, avg_y, (int)depthBuff[index]);
 }
 
 // returns depth-mapped color buffer

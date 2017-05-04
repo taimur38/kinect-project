@@ -6,10 +6,10 @@
 using namespace std;
 
 struct Corners {
-	ofVec2f topLeft;
-	ofVec2f topRight;
-	ofVec2f bottomLeft;
-	ofVec2f bottomRight;
+	ofVec3f topLeft;
+	ofVec3f topRight;
+	ofVec3f bottomLeft;
+	ofVec3f bottomRight;
 };
 
 class Calibrater {
@@ -30,7 +30,7 @@ public:
 
 	void setCorners(Corners _corners);
 
-	int convertIndex(int x);
+	int convertIndex(int x, short d);
 
 private:
 	IKinectSensor* kinect;
@@ -70,7 +70,7 @@ private:
 
 	int cornersCalibrated = 0;
 
-	ofVec2f getCenterOfSquare();
 	void findSquare();
-	void setCorner();
+	ofVec3f getCenterOfSquare(unsigned short* depthBuff);
+	void setCorner(unsigned short* depthBuff);
 };

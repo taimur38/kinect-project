@@ -83,8 +83,8 @@ void ofApp::setup(){
 	corners.topLeft = ofVec2f(422, 68);
 	corners.topRight = ofVec2f(167, 49);
 
-	calibrater->setCorners(corners);
-	calibrated = true;
+	//calibrater->setCorners(corners);
+	//calibrated = true;
 }
 
 int zones = 4;
@@ -96,8 +96,10 @@ void ofApp::update() {
 		IDepthFrame* df;
 		depthBuffer = calibrater->getMappedDepthFrame(&df);
 
-		if (colorBuffer.size() != depth_width * depth_height * 4) {
-			colorBuffer.resize(depth_width * depth_height * 4);
+		auto w = calibrater->getMappedWidth();
+		auto h = calibrater->getMappedHeight();
+		if (colorBuffer.size() != w * h * 4) {
+			colorBuffer.resize(w * h * 4);
 		}
 
 		unsigned short maxDist = 0;
@@ -147,7 +149,7 @@ void ofApp::update() {
 
 		}
 
-		texture.loadData(&colorBuffer[0], calibrater->getMappedWidth(), calibrater->getMappedHeight(), GL_BGRA);
+		texture.loadData(&colorBuffer[0], w, h, GL_BGRA);
 
 		if (df)
 			df->Release();
