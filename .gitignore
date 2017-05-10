@@ -20,7 +20,11 @@
 x64/
 x86/
 bld/
-[Bb]in/
+[Bb]in/*.dll
+[Bb]in/*.exe
+[Bb]in/*.pdb
+[Bb]in/*.lib
+[Bb]in/*.exp
 [Oo]bj/
 [Ll]og/
 

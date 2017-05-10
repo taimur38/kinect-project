@@ -86,6 +86,8 @@ vector<unsigned short>& Calibrater::getMappedDepthFrame(IDepthFrame** depthFrame
 	std::fill(depthBuffer.begin(), depthBuffer.end(), 0);
 	for (int i = 0; i < depthSize; i++) {
 		unsigned short depth = depthBuff[i];
+		if (i > 0 && i < depthSize - 1)
+			depth = (depthBuff[i - 1] + depthBuff[i] + depthBuff[i + 1]) / 3.0;
 		if (depth > minDepth && depth < maxDepth) {
 			int mappedIndex = convertIndex(i, depth);
 			if (mappedIndex > -1) {
