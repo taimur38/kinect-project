@@ -38,6 +38,8 @@ class ofApp : public ofBaseApp{
 
 		ICoordinateMapper* cMapper;
 
+		ofShader shaderProg;
+
 		int px_width;
 		int px_height;
 		unsigned int bpp;
@@ -81,4 +83,6 @@ class ofApp : public ofBaseApp{
 		ofFloatPixels pixelz;
 		ofTexture texture;
 		ofImage img;
+
+		ofPlanePrimitive plane;
 };

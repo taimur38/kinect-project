@@ -27,4 +27,8 @@
   <ItemGroup>
     <ResourceCompile Include="icon.rc" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="bin\data\test.frag" />
+    <None Include="bin\data\test.vert" />
+  </ItemGroup>
 </Project>

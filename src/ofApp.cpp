@@ -68,7 +68,7 @@ void ofApp::setup(){
 	depth2rgb = new ColorSpacePoint[depth_width * depth_height];
 
 	texture.allocate(depth_width, depth_height, GL_RGBA);
-	texture.enableMipmap();
+	//texture.enableMipmap();
 
 	img.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
 	//pixelz.allocate(px_width, px_height, ofImageType::OF_IMAGE_COLOR);
@@ -82,6 +82,8 @@ void ofApp::setup(){
 	corners.bottomRight = ofVec2f(156, 195);
 	corners.topLeft = ofVec2f(422, 68);
 	corners.topRight = ofVec2f(167, 49);
+
+	shaderProg.load("test.vert", "test.frag");
 
 	//calibrater->setCorners(corners);
 	//calibrated = true;
@@ -167,7 +169,15 @@ void ofApp::draw() {
 
 	}
 	else {
-		texture.draw(0, 0, w, h);
+		//texture.draw(0, 0, w, h);
+
+		shaderProg.begin();
+		shaderProg.setUniformTexture("depthData", texture, 1);
+
+		ofTranslate(w / 2, h / 2);
+		plane.drawWireframe();
+		shaderProg.end();
+
 	}
 }
 
@@ -187,12 +197,13 @@ void ofApp::keyPressed(int key){
 
 	if (state == 4 && !calibrated) {
 		calibrated = true;
-		newWidth = std::abs(topRight.x - topLeft.x);
-		newHeight = std::abs(topRight.y - bottomRight.y);
+		newWidth = calibrater->getMappedWidth();
+		newHeight = calibrater->getMappedHeight();
 
-		ofLog(OF_LOG_VERBOSE, "locations:\nTL: (%f, %f)\n TR: (%f, %f)\n BL: (%f, %f)\n BR: (%f, %f)", topLeft.x, topLeft.y, topRight.x, topRight.y, bottomLeft.x, bottomLeft.y, bottomRight.x, bottomRight.y);
+		ofLog(OF_LOG_VERBOSE, "dimensions: (%d, %d)", newWidth, newHeight);
 
 		copyBuffer.resize(newWidth * newHeight * 4);
+		plane.set(ofGetViewportWidth(), ofGetViewportHeight(), newHeight, OF_PRIMITIVE_TRIANGLES);
 	}
 }
 
