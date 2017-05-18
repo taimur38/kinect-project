@@ -172,7 +172,8 @@ void ofApp::draw() {
 		//texture.draw(0, 0, w, h);
 
 		shaderProg.begin();
-		shaderProg.setUniformTexture("depthData", texture, 1);
+		shaderProg.setUniformTexture("depthData", texture, 0);
+		shaderProg.setUniform1f("time", ofGetElapsedTimef());
 
 		ofTranslate(w / 2, h / 2);
 		plane.drawWireframe();
@@ -203,7 +204,7 @@ void ofApp::keyPressed(int key){
 		ofLog(OF_LOG_VERBOSE, "dimensions: (%d, %d)", newWidth, newHeight);
 
 		copyBuffer.resize(newWidth * newHeight * 4);
-		plane.set(ofGetViewportWidth(), ofGetViewportHeight(), newHeight, OF_PRIMITIVE_TRIANGLES);
+		plane.set(ofGetViewportWidth(), ofGetViewportHeight(), newWidth, newHeight, OF_PRIMITIVE_TRIANGLES);
 	}
 }
 
