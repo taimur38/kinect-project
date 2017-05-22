@@ -8,7 +8,8 @@ void ofApp::setup(){
 	ofSetFrameRate(30);
 
 	ofSetFullscreen(true);
-	ofDisableArbTex();
+	//ofDisableArbTex();
+	//ofDisableNormalizedTexCoords();
 	ofSetBackgroundColor(ofColor::black);
 	ofSetLogLevel(OF_LOG_VERBOSE);
 
@@ -172,6 +173,7 @@ void ofApp::draw() {
 		//texture.draw(0, 0, w, h);
 
 		plane.mapTexCoordsFromTexture(texture);
+		//plane.mapTexCoords(0, 0, w, h);
 
 		texture.bind();
 		shaderProg.begin();
@@ -180,6 +182,7 @@ void ofApp::draw() {
 
 		ofTranslate(w / 2, h / 2);
 		plane.drawWireframe();
+		//plane.drawVertices();
 		//ofDrawRectangle(0, 0, w, h);
 		shaderProg.end();
 		texture.unbind();

@@ -16,11 +16,15 @@ void main()
 	float windowWidth = 1920;
     float windowHeight = 1080;
 
-    float r = gl_FragCoord.x / windowWidth;
-    float g = gl_FragCoord.y / windowHeight;
+    float r = varyingtexcoord.x / windowWidth;
+    float g = varyingtexcoord.y / windowHeight;
     float b = (sin(time) + 1)/2.0;
     float a = 1.0;
 
     //outputColor = vec4(r, g, b, a);
-	outputColor = depth;
+	if(depth.r == 0 && depth.g == 0  && depth.b == 0) {
+		outputColor = vec4(r ,g, 0.0, 1.0);
+	} else {
+		outputColor = depth;
+	}
 }
