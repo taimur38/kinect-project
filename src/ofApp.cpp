@@ -108,43 +108,17 @@ void ofApp::update() {
 		int maxDist = calibrater->avgCalibrationDepth;
 
 		for (int i = 0; i < depthBuffer.size(); i++) {
-			unsigned short depth = depthBuffer[i];
-			int zonedDepth = (depth / 20) % zones;
+			int rawDepth = depthBuffer[i];
 
-			if (depth == 0 || depth > .95 * maxDist) {
-				colorBuffer[i * 4] = 0;
-				colorBuffer[i * 4 + 1] = 0;
-				colorBuffer[i * 4 + 2] = 0;
-				colorBuffer[i * 4 + 3] = 255;
-				continue;
-			}
-			switch (zonedDepth) {
-				case 0:
-					colorBuffer[i * 4] = 255;
-					colorBuffer[i * 4 + 1] = 0;
-					colorBuffer[i * 4 + 2] = 0;
-					colorBuffer[i * 4 + 3] = 255;
-					break;
-				case 1:
-					colorBuffer[i * 4] = 0;
-					colorBuffer[i * 4 + 1] = 255;
-					colorBuffer[i * 4 + 2] = 0;
-					colorBuffer[i * 4 + 3] = 255;
-					break;
-				case 2:
-					colorBuffer[i * 4] = 0;
-					colorBuffer[i * 4 + 1] = 0;
-					colorBuffer[i * 4 + 2] = 255;
-					colorBuffer[i * 4 + 3] = 255;
-					break;
-				case 3:
-					colorBuffer[i * 4] = 0;
-					colorBuffer[i * 4 + 1] = 255;
-					colorBuffer[i * 4 + 2] = 255;
-					colorBuffer[i * 4 + 3] = 255;
-					break;
+			int depth = 0;
+			if (rawDepth != 0 && rawDepth < .95 * maxDist) {
+				depth = (1 - ((float)rawDepth) / maxDist) * 255;
 			}
 
+			colorBuffer[i * 4] = depth;
+			colorBuffer[i * 4 + 1] = depth;
+			colorBuffer[i * 4 + 2] = depth;
+			colorBuffer[i * 4 + 3] = depth;
 		}
 
 		texture.loadData(&colorBuffer[0], w, h, GL_BGRA);
@@ -165,9 +139,7 @@ void ofApp::draw() {
 
 	if (!calibrated) {
 		//ofLog(OF_LOG_VERBOSE, "state is: %d", state);
-		//boxaroo.draw(w * (state % 2) - s / 2, h * (state / 2) - s / 2, s, s); // place square. top left, top right, bottom left, bottom right.
 		calibrater->Draw();
-
 	}
 	else {
 
