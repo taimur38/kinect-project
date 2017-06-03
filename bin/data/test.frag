@@ -22,9 +22,6 @@ void main()
     float a = 1.0;
 
     //outputColor = vec4(r, g, b, a);
-	if(depth.r == 0 && depth.g == 0  && depth.b == 0) {
-		outputColor = vec4(r ,g, 0.0, 1.0);
-	} else {
-		outputColor = depth;
-	}
+
+	outputColor = depth;
 }

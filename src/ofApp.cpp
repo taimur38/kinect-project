@@ -170,20 +170,15 @@ void ofApp::draw() {
 
 	}
 	else {
-		//texture.draw(0, 0, w, h);
 
-		plane.mapTexCoordsFromTexture(texture);
-		//plane.mapTexCoords(0, 0, w, h);
+		plane.mapTexCoords(0, 0, newWidth, newHeight);
 
 		texture.bind();
 		shaderProg.begin();
-		//shaderProg.setUniformTexture("depthData", texture, 0);
 		shaderProg.setUniform1f("time", ofGetElapsedTimef());
 
 		ofTranslate(w / 2, h / 2);
 		plane.drawWireframe();
-		//plane.drawVertices();
-		//ofDrawRectangle(0, 0, w, h);
 		shaderProg.end();
 		texture.unbind();
 
