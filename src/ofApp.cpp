@@ -178,7 +178,7 @@ void ofApp::draw() {
 		shaderProg.setUniform1f("time", ofGetElapsedTimef());
 
 		ofTranslate(w / 2, h / 2);
-		plane.drawWireframe();
+		plane.drawFaces();
 		shaderProg.end();
 		texture.unbind();
 
